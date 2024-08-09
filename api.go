@@ -1,4 +1,4 @@
-package warcry_go
+package main
 
 import (
 	"encoding/json"

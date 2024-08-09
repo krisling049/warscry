@@ -1,4 +1,4 @@
-package warcry_go
+package main
 
 type Ability struct {
 	Id              string   `json:"_id"`

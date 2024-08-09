@@ -1,4 +1,4 @@
-package warcry_go
+package main
 
 func (F *Fighters) GetWarband(factionRunemark string) *Fighters {
 	warband := Fighters{}
