@@ -27,6 +27,13 @@ func All(s []bool) bool {
 	return false
 }
 
+func Any(s []bool) bool {
+	if slices.Contains(s, true) {
+		return true
+	}
+	return false
+}
+
 func StringInclude(characteristic string, values []string) bool {
 	var (
 		lowerValues []string
@@ -113,47 +120,15 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var toRet Fighters
-	var conditions []bool
 
 	if len(r.Form) > 0 {
 		for _, f := range h.Fighters {
-			conditions = nil
-			conditions = append(conditions, StringInclude(f.Name, r.Form["name"]))
-			conditions = append(conditions, StringInclude(f.Id, r.Form["_id"]))
-			conditions = append(conditions, StringInclude(f.BladebornRunemark, r.Form["bladeborn"]))
-			conditions = append(conditions, StringInclude(f.GrandAlliance, r.Form["grand_alliance"]))
-			conditions = append(conditions, StringInclude(f.FactionRunemark, r.Form["warband"]))
-			mv, mErr := IntInclude(f.Movement, r.Form["movement"])
-			if mErr != nil {
-				response = []byte(fmt.Sprintf("an error occurred -- %s", mErr))
+			include, err := f.MatchesRequest(r)
+			if err != nil {
+				response = []byte(fmt.Sprintf("an error occurred -- %s", err))
 				break
-			} else {
-				conditions = append(conditions, mv)
 			}
-			wo, wErr := IntInclude(f.Wounds, r.Form["wounds"])
-			if wErr != nil {
-				response = []byte(fmt.Sprintf("an error occurred -- %s", wErr))
-				break
-			} else {
-				conditions = append(conditions, wo)
-			}
-			pt, pErr := IntInclude(f.Points, r.Form["points"])
-			if pErr != nil {
-				response = []byte(fmt.Sprintf("an error occurred -- %s", pErr))
-				break
-			} else {
-				conditions = append(conditions, pt)
-			}
-			to, tErr := IntInclude(f.Toughness, r.Form["toughness"])
-			if tErr != nil {
-				response = []byte(fmt.Sprintf("an error occurred -- %s", tErr))
-				break
-			} else {
-				conditions = append(conditions, to)
-			}
-			conditions = append(conditions, StringSliceInclude(f.Runemarks, r.Form["runemarks"]))
-
-			if All(conditions) {
+			if include {
 				toRet = append(toRet, f)
 			}
 		}
@@ -163,17 +138,6 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(response) == 0 {
 		successfulQuery = true
 	}
-	//        "weapons": [
-	//            {
-	//                "attacks": 3,
-	//                "dmg_crit": 3,
-	//                "dmg_hit": 1,
-	//                "max_range": 1,
-	//                "min_range": 0,
-	//                "runemark": "axe",
-	//                "strength": 3
-	//            }
-	//        ],
 
 	if successfulQuery {
 		marshalledResponse, err := json.Marshal(toRet)
