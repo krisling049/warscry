@@ -3,6 +3,7 @@ package warcry_go
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"slices"
 	"strconv"
@@ -146,5 +147,8 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		response = marshalledResponse
 	}
-	w.Write(response)
+	_, writeErr := w.Write(response)
+	if writeErr != nil {
+		log.Printf("WARNING: failed to write response -- %s", writeErr)
+	}
 }
