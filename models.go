@@ -1,5 +1,14 @@
 package warcry_go
 
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+)
+
 type Ability struct {
 	Id              string   `json:"_id"`
 	Name            string   `json:"name"`
@@ -44,4 +53,49 @@ type Warband struct {
 	Fighters     Fighters  `json:"fighters"`
 	Abilities    Abilities `json:"abilities"`
 	BattleTraits Abilities `json:"battle_traits"`
+}
+
+func GitLoad(url string) ([]byte, error) {
+	resp, getErr := http.Get(url)
+	if getErr != nil {
+		return nil, getErr
+	}
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return nil, readErr
+	}
+	closeErr := resp.Body.Close()
+	if closeErr != nil {
+		return nil, closeErr
+	}
+	if resp.StatusCode > 299 {
+		return nil, errors.New(
+			fmt.Sprintf("Response failed with status code: %d", resp.StatusCode),
+		)
+	}
+	return body, nil
+}
+
+func (F *Fighters) FromGit() {
+	url := "https://krisling049.github.io/warcry_data/fighters.json"
+	data, dataErr := GitLoad(url)
+	if dataErr != nil {
+		log.Fatalf("error loading fighter data from %s -- %s", url, dataErr)
+	}
+	jsonErr := json.Unmarshal(data, &F)
+	if jsonErr != nil {
+		log.Fatalf("error marshalling fighter data -- %s", jsonErr)
+	}
+}
+
+func (A *Abilities) FromGit() {
+	url := "https://krisling049.github.io/warcry_data/abilities_battletraits.json"
+	data, dataErr := GitLoad(url)
+	if dataErr != nil {
+		log.Fatalf("error loading ability data from %s -- %s", url, dataErr)
+	}
+	jsonErr := json.Unmarshal(data, &A)
+	if jsonErr != nil {
+		log.Fatalf("error marshalling ability data -- %s", jsonErr)
+	}
 }
