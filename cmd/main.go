@@ -82,6 +82,11 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Register the routes and handlers
+	mux.Handle("/", &wcd.RootHandler{
+		Content: fmt.Sprintf("Welcome to Warscry!\nWarbands: %v\nFighters: %v\nAbilities: %v",
+			len(AllWarbands), len(AllFighters), len(AllAbilities),
+		)},
+	)
 	mux.Handle("/fighters", &wcd.FighterHandler{Fighters: AllFighters})
 
 	// Run the server

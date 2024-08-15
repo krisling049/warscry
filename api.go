@@ -14,6 +14,18 @@ type FighterHandler struct {
 	Fighters Fighters
 }
 
+type RootHandler struct {
+	Content string
+}
+
+func (R *RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	response := []byte(R.Content)
+	_, err := w.Write(response)
+	if err != nil {
+		log.Printf("WARNING: failed to write response -- %s", err)
+	}
+}
+
 func All(s []bool) bool {
 	var trues int
 
