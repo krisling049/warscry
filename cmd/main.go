@@ -41,6 +41,7 @@ func main() {
 		)},
 	)
 	mux.Handle("/fighters", &wcd.FighterHandler{Fighters: AllFighters})
+	mux.Handle("/abilities", &wcd.AbilityHandler{Abilities: AllAbilities})
 
 	// Run the server
 	serveErr := http.ListenAndServe(GetPort(), mux)

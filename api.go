@@ -14,6 +14,10 @@ type FighterHandler struct {
 	Fighters Fighters
 }
 
+type AbilityHandler struct {
+	Abilities Abilities
+}
+
 type RootHandler struct {
 	Content string
 }
@@ -63,6 +67,32 @@ func StringInclude(characteristic string, values []string) bool {
 
 	if slices.Contains(lowerValues, strings.ToLower(characteristic)) {
 		Include = true
+	}
+
+	return Include
+}
+
+func SubStringInclude(characteristic string, values []string) bool {
+	var (
+		lowerValues []string
+		Include     = false
+	)
+	if len(values) < 1 {
+		Include = true
+		return Include
+	}
+
+	for _, n := range values {
+		lowerValues = append(lowerValues, strings.ToLower(n))
+	}
+
+	for _, s := range lowerValues {
+		if strings.Contains(strings.ToLower(characteristic), s) {
+			Include = true
+		}
+		if Include {
+			break
+		}
 	}
 
 	return Include
@@ -147,6 +177,49 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		toRet = append(toRet, h.Fighters...)
+	}
+	if len(response) == 0 {
+		successfulQuery = true
+	}
+
+	if successfulQuery {
+		marshalledResponse, err := json.Marshal(toRet)
+		if err != nil {
+			response = []byte(fmt.Sprintf("an error occurred while getting the requested data -- %s", err))
+		}
+		response = marshalledResponse
+	}
+	_, writeErr := w.Write(response)
+	if writeErr != nil {
+		log.Printf("WARNING: failed to write response -- %s", writeErr)
+	}
+}
+
+func (h *AbilityHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var (
+		successfulQuery = false
+		response        []byte
+	)
+	perr := r.ParseForm()
+	if perr != nil {
+		response = []byte(fmt.Sprintf("failed to read request -- %s", perr))
+	}
+
+	var toRet Abilities
+
+	if len(r.Form) > 0 {
+		for _, a := range h.Abilities {
+			include, err := a.MatchesRequest(r)
+			if err != nil {
+				response = []byte(fmt.Sprintf("an error occurred -- %s", err))
+				break
+			}
+			if include {
+				toRet = append(toRet, a)
+			}
+		}
+	} else {
+		toRet = append(toRet, h.Abilities...)
 	}
 	if len(response) == 0 {
 		successfulQuery = true
