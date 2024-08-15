@@ -5,6 +5,7 @@ import (
 	wcd "github.com/krisling049/warcry_go"
 	"log"
 	"net/http"
+	"os"
 )
 
 var (
@@ -12,6 +13,15 @@ var (
 	AllAbilities = wcd.Abilities{}
 	AllWarbands  = wcd.Warbands{}
 )
+
+func GetPort() string {
+	var port string
+	port = os.Getenv("WARSCRY_PORT")
+	if port == "" {
+		port = "4424"
+	}
+	return fmt.Sprintf(":%s", port)
+}
 
 func main() {
 	AllFighters.FromGit()
@@ -33,7 +43,7 @@ func main() {
 	mux.Handle("/fighters", &wcd.FighterHandler{Fighters: AllFighters})
 
 	// Run the server
-	serveErr := http.ListenAndServe(":4424", mux)
+	serveErr := http.ListenAndServe(GetPort(), mux)
 	if serveErr != nil {
 		log.Fatalln(serveErr)
 	}
