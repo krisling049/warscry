@@ -29,17 +29,17 @@ type Weapon struct {
 }
 
 type Fighter struct {
-	Id                string   `json:"_id"`
-	Name              string   `json:"name"`
-	FactionRunemark   string   `json:"warband"`
-	Runemarks         []string `json:"runemarks"`
-	BladebornRunemark string   `json:"bladeborn,omitempty"`
-	GrandAlliance     string   `json:"grand_alliance"`
-	Movement          int      `json:"movement"`
-	Toughness         int      `json:"toughness"`
-	Wounds            int      `json:"wounds"`
-	Points            int      `json:"points,omitempty"`
-	Weapons           []Weapon `json:"weapons"`
+	Id              string   `json:"_id"`
+	Name            string   `json:"name"`
+	FactionRunemark string   `json:"warband"`
+	Runemarks       []string `json:"runemarks"`
+	Subfaction      string   `json:"subfaction"`
+	GrandAlliance   string   `json:"grand_alliance"`
+	Movement        int      `json:"movement"`
+	Toughness       int      `json:"toughness"`
+	Wounds          int      `json:"wounds"`
+	Points          int      `json:"points,omitempty"`
+	Weapons         []Weapon `json:"weapons"`
 }
 
 type (

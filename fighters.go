@@ -27,7 +27,7 @@ func (f *Fighter) MatchesRequest(r *http.Request) (bool, error) {
 	// fighter characteristics
 	conditions = append(conditions, StringInclude(f.Name, r.Form["name"]))
 	conditions = append(conditions, StringInclude(f.Id, r.Form["_id"]))
-	conditions = append(conditions, StringInclude(f.BladebornRunemark, r.Form["bladeborn"]))
+	conditions = append(conditions, StringInclude(f.Subfaction, r.Form["subfaction"]))
 	conditions = append(conditions, StringInclude(f.GrandAlliance, r.Form["grand_alliance"]))
 	conditions = append(conditions, StringInclude(f.FactionRunemark, r.Form["warband"]))
 	mv, mErr := IntInclude(f.Movement, r.Form["movement"])

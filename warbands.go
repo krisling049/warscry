@@ -33,7 +33,7 @@ func (W *Warband) AddAbility(a *Ability) error {
 func LoadWarbands(F *Fighters, A *Abilities) *Warbands {
 	var wbslice []string
 	wbs := make(map[string]Warband)
-	bladeborn := make(map[string]string)
+	subfaction := make(map[string]string)
 	newW := Warbands{}
 
 	for _, f := range *F {
@@ -46,15 +46,15 @@ func LoadWarbands(F *Fighters, A *Abilities) *Warbands {
 		if !slices.Contains(wbslice, f.FactionRunemark) {
 			wbslice = append(wbslice, f.FactionRunemark)
 		}
-		if f.BladebornRunemark != "" {
-			bladeborn[f.BladebornRunemark] = f.FactionRunemark
+		if f.Subfaction != "" {
+			subfaction[f.Subfaction] = f.FactionRunemark
 		}
 	}
 	for _, a := range *A {
 		faction := a.FactionRunemark
-		bbornfaction, _ := bladeborn[a.FactionRunemark]
-		if bbornfaction != "" {
-			faction = bbornfaction
+		sfaction, _ := subfaction[a.FactionRunemark]
+		if sfaction != "" {
+			faction = sfaction
 		}
 		wb, _ := wbs[faction]
 		if a.Type == "battle_trait" {
