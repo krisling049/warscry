@@ -53,6 +53,13 @@ type Warband struct {
 	Fighters     Fighters  `json:"fighters"`
 	Abilities    Abilities `json:"abilities"`
 	BattleTraits Abilities `json:"battle_traits"`
+	// Subfactions  []Subfaction `json:"subfactions"`
+}
+
+type Subfaction struct {
+	Runemark  string `json:"runemark"`
+	Bladeborn bool   `json:"bladeborn"`
+	HeroesAll bool   `json:"heroes_all"`
 }
 
 func GitLoad(url string) ([]byte, error) {
