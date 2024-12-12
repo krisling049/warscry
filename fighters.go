@@ -1,6 +1,7 @@
 package warcry_go
 
 import (
+	"fmt"
 	"net/http"
 )
 
@@ -24,37 +25,67 @@ func (F *Fighters) GetIds() []string {
 
 func (f *Fighter) MatchesRequest(r *http.Request) (bool, error) {
 	var conditions []bool
-	// fighter characteristics
+	var toCheck string
+	operatorKeys := []string{"__gt", "__gte", "__lt", "__lte"}
+
+	// fighter string characteristics
 	conditions = append(conditions, StringInclude(f.Name, r.Form["name"]))
 	conditions = append(conditions, StringInclude(f.Id, r.Form["_id"]))
 	conditions = append(conditions, StringInclude(f.Subfaction, r.Form["subfaction"]))
 	conditions = append(conditions, StringInclude(f.GrandAlliance, r.Form["grand_alliance"]))
 	conditions = append(conditions, StringInclude(f.FactionRunemark, r.Form["warband"]))
-	mv, mErr := IntInclude(f.Movement, r.Form["movement"])
-	if mErr != nil {
-		return false, mErr
-	} else {
-		conditions = append(conditions, mv)
-	}
-	wo, wErr := IntInclude(f.Wounds, r.Form["wounds"])
-	if wErr != nil {
-		return false, wErr
-	} else {
-		conditions = append(conditions, wo)
-	}
-	pt, pErr := IntInclude(f.Points, r.Form["points"])
-	if pErr != nil {
-		return false, pErr
-	} else {
-		conditions = append(conditions, pt)
-	}
-	to, tErr := IntInclude(f.Toughness, r.Form["toughness"])
-	if tErr != nil {
-		return false, tErr
-	} else {
-		conditions = append(conditions, to)
-	}
+
+	// fighter []string characteristics
 	conditions = append(conditions, StringSliceInclude(f.Runemarks, r.Form["runemarks"]))
+
+	// fighter int characteristics
+	for _, key := range operatorKeys {
+		toCheck = fmt.Sprintf("movement%s", key)
+		if r.Form[toCheck] != nil {
+			mv, mErr := IntInclude(f.Movement, r.Form[toCheck], GetOperator(toCheck))
+			if mErr != nil {
+				return false, mErr
+			} else {
+				conditions = append(conditions, mv)
+			}
+		}
+	}
+
+	for _, key := range operatorKeys {
+		toCheck = fmt.Sprintf("wounds%s", key)
+		if r.Form[toCheck] != nil {
+			wo, wErr := IntInclude(f.Wounds, r.Form[toCheck], GetOperator(key))
+			if wErr != nil {
+				return false, wErr
+			} else {
+				conditions = append(conditions, wo)
+			}
+		}
+	}
+
+	for _, key := range operatorKeys {
+		toCheck = fmt.Sprintf("points%s", key)
+		if r.Form[toCheck] != nil {
+			pt, pErr := IntInclude(f.Points, r.Form[toCheck], GetOperator(key))
+			if pErr != nil {
+				return false, pErr
+			} else {
+				conditions = append(conditions, pt)
+			}
+		}
+	}
+
+	for _, key := range operatorKeys {
+		toCheck = fmt.Sprintf("toughness%s", key)
+		if r.Form[toCheck] != nil {
+			to, tErr := IntInclude(f.Toughness, r.Form[toCheck], GetOperator(key))
+			if tErr != nil {
+				return false, tErr
+			} else {
+				conditions = append(conditions, to)
+			}
+		}
+	}
 
 	// weapon characteristics
 	weapon1Include, weapon1Err := f.Weapons[0].MatchesRequest(r)
@@ -81,43 +112,63 @@ func (f *Fighter) MatchesRequest(r *http.Request) (bool, error) {
 func (weapon *Weapon) MatchesRequest(r *http.Request) (bool, error) {
 	var conditions []bool
 
+	// weapon []string characteristics
 	conditions = append(conditions, StringInclude(weapon.Runemark, r.Form["weapon_runemark"]))
 
-	a, aErr := IntInclude(weapon.Attacks, r.Form["attacks"])
-	if aErr != nil {
-		return false, aErr
+	// weapon int characteristics
+	for _, key := range []string{"attacks", "attacks__gt", "attacks__lt"} {
+		a, aErr := IntInclude(weapon.Attacks, r.Form[key], GetOperator(key))
+		if aErr != nil {
+			return false, aErr
+		} else {
+			conditions = append(conditions, a)
+		}
 	}
-	conditions = append(conditions, a)
 
-	s, sErr := IntInclude(weapon.Strength, r.Form["strength"])
-	if sErr != nil {
-		return false, sErr
+	for _, key := range []string{"strength", "strength__gt", "strength__lt"} {
+		s, sErr := IntInclude(weapon.Strength, r.Form[key], GetOperator(key))
+		if sErr != nil {
+			return false, sErr
+		} else {
+			conditions = append(conditions, s)
+		}
 	}
-	conditions = append(conditions, s)
 
-	d, dErr := IntInclude(weapon.DamageHit, r.Form["dmg_hit"])
-	if dErr != nil {
-		return false, dErr
+	for _, key := range []string{"dmg_hit", "dmg_hit__gt", "dmg_hit__lt"} {
+		d, dErr := IntInclude(weapon.DamageHit, r.Form[key], GetOperator(key))
+		if dErr != nil {
+			return false, dErr
+		} else {
+			conditions = append(conditions, d)
+		}
 	}
-	conditions = append(conditions, d)
 
-	dc, dcErr := IntInclude(weapon.DamageCrit, r.Form["dmg_crit"])
-	if dcErr != nil {
-		return false, dcErr
+	for _, key := range []string{"dmg_crit", "dmg_crit__gt", "dmg_crit__lt"} {
+		dc, dcErr := IntInclude(weapon.DamageHit, r.Form[key], GetOperator(key))
+		if dcErr != nil {
+			return false, dcErr
+		} else {
+			conditions = append(conditions, dc)
+		}
 	}
-	conditions = append(conditions, dc)
 
-	maxRange, maxrErr := IntInclude(weapon.MaximumRange, r.Form["max_range"])
-	if maxrErr != nil {
-		return false, maxrErr
+	for _, key := range []string{"max_range", "max_range__gt", "max_range__lt"} {
+		maxRange, maxrErr := IntInclude(weapon.DamageHit, r.Form[key], GetOperator(key))
+		if maxrErr != nil {
+			return false, maxrErr
+		} else {
+			conditions = append(conditions, maxRange)
+		}
 	}
-	conditions = append(conditions, maxRange)
 
-	minRange, minErr := IntInclude(weapon.MinimumRange, r.Form["min_range"])
-	if minErr != nil {
-		return false, minErr
+	for _, key := range []string{"min_range", "min_range__gt", "min_range__lt"} {
+		minRange, minErr := IntInclude(weapon.DamageHit, r.Form[key], GetOperator(key))
+		if minErr != nil {
+			return false, minErr
+		} else {
+			conditions = append(conditions, minRange)
+		}
 	}
-	conditions = append(conditions, minRange)
 
 	if All(conditions) {
 		return true, nil

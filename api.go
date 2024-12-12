@@ -23,6 +23,7 @@ type RootHandler struct {
 }
 
 func (R *RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Printf("serving request from %s", r.Host)
 	response := []byte(R.Content)
 	_, err := w.Write(response)
 	if err != nil {
@@ -49,6 +50,57 @@ func Any(s []bool) bool {
 		return true
 	}
 	return false
+}
+
+type Operator func(int, int) bool
+
+func Equals(characteristic int, requested int) bool {
+	if requested == characteristic {
+		return true
+	}
+	return false
+}
+
+func GreaterThan(characteristic int, minimum int) bool {
+	if characteristic > minimum {
+		return true
+	}
+	return false
+}
+
+func GreaterThanOrEqualTo(characteristic int, minimum int) bool {
+	if characteristic >= minimum {
+		return true
+	}
+	return false
+}
+
+func LessThan(characteristic int, maximum int) bool {
+	if characteristic < maximum {
+		return true
+	}
+	return false
+}
+
+func LessThanOrEqualTo(characteristic int, maximum int) bool {
+	if characteristic <= maximum {
+		return true
+	}
+	return false
+}
+
+func GetOperator(queryKey string) Operator {
+	OperatorMap := map[string]Operator{
+		"gt":  GreaterThan,
+		"gte": GreaterThanOrEqualTo,
+		"lt":  LessThan,
+		"lte": LessThanOrEqualTo,
+	}
+	if strings.Contains(queryKey, "__") {
+		opString := strings.Split(queryKey, "_")
+		return OperatorMap[opString[len(opString)-1]]
+	}
+	return Equals
 }
 
 func StringInclude(characteristic string, values []string) bool {
@@ -98,7 +150,7 @@ func SubStringInclude(characteristic string, values []string) bool {
 	return Include
 }
 
-func IntInclude(characteristic int, values []string) (bool, error) {
+func IntInclude(characteristic int, values []string, o Operator) (bool, error) {
 	var (
 		Include   = false
 		intValues []int
@@ -116,9 +168,15 @@ func IntInclude(characteristic int, values []string) (bool, error) {
 		intValues = append(intValues, i)
 	}
 
-	if slices.Contains(intValues, characteristic) {
-		Include = true
+	for _, v := range intValues {
+		if o(characteristic, v) {
+			Include = true
+		}
 	}
+
+	//if slices.Contains(intValues, characteristic) {
+	//	Include = true
+	//}
 	return Include, nil
 }
 
