@@ -248,7 +248,7 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if successfulQuery {
-		log.Printf("returning %d fighters to %s", len(toRet), r.Host)
+		log.Printf("returning %d fighters to %s", len(toRet), r.RemoteAddr)
 		marshalledResponse, err := json.Marshal(toRet)
 		if err != nil {
 			response = []byte(fmt.Sprintf("an error occurred while getting the requested data -- %s", err))
