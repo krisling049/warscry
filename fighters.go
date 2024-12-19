@@ -24,7 +24,7 @@ func (F *Fighters) GetIds() []string {
 	return Ids
 }
 
-func (f *Fighter) MatchesRequest(r *http.Request, c chan Fighter) {
+func (f *Fighter) MatchesRequest(r *http.Request, c chan<- Fighter) {
 	var conditions []bool
 	var toCheck string
 	operatorKeys := []string{"__gt", "__gte", "__lt", "__lte"}
