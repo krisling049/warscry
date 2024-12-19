@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type FighterHandler struct {
@@ -23,7 +24,6 @@ type RootHandler struct {
 }
 
 func (R *RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("serving request from %s", r.Host)
 	response := []byte(R.Content)
 	_, err := w.Write(response)
 	if err != nil {
@@ -214,33 +214,41 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
 		successfulQuery = false
 		response        []byte
+		toRet           Fighters
+		wg              sync.WaitGroup
 	)
 	perr := r.ParseForm()
 	if perr != nil {
 		response = []byte(fmt.Sprintf("failed to read request -- %s", perr))
 	}
 
-	var toRet Fighters
+	fChan := make(chan Fighter, len(h.Fighters))
 
 	if len(r.Form) > 0 {
-		for _, f := range h.Fighters {
-			include, err := f.MatchesRequest(r)
-			if err != nil {
-				response = []byte(fmt.Sprintf("an error occurred -- %s", err))
-				break
-			}
-			if include {
-				toRet = append(toRet, f)
-			}
+		for i := range h.Fighters {
+			wg.Add(1)
+			index := i
+			go func() {
+				defer wg.Done()
+				h.Fighters[index].MatchesRequest(r, fChan)
+			}()
 		}
+		wg.Wait()
+		close(fChan)
 	} else {
 		toRet = append(toRet, h.Fighters...)
+	}
+
+	// close(fChan)
+	for includedFighter := range fChan {
+		toRet = append(toRet, includedFighter)
 	}
 	if len(response) == 0 {
 		successfulQuery = true
 	}
 
 	if successfulQuery {
+		log.Printf("returning %d fighters to %s", len(toRet), r.Host)
 		marshalledResponse, err := json.Marshal(toRet)
 		if err != nil {
 			response = []byte(fmt.Sprintf("an error occurred while getting the requested data -- %s", err))

@@ -2,6 +2,7 @@ package warcry_go
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -23,7 +24,7 @@ func (F *Fighters) GetIds() []string {
 	return Ids
 }
 
-func (f *Fighter) MatchesRequest(r *http.Request) (bool, error) {
+func (f *Fighter) MatchesRequest(r *http.Request, c chan Fighter) {
 	var conditions []bool
 	var toCheck string
 	operatorKeys := []string{"__gt", "__gte", "__lt", "__lte"}
@@ -44,7 +45,7 @@ func (f *Fighter) MatchesRequest(r *http.Request) (bool, error) {
 		if r.Form[toCheck] != nil {
 			mv, mErr := IntInclude(f.Movement, r.Form[toCheck], GetOperator(toCheck))
 			if mErr != nil {
-				return false, mErr
+				log.Printf("%s - error while querying fighter\n%e", f.Name, mErr)
 			} else {
 				conditions = append(conditions, mv)
 			}
@@ -56,7 +57,7 @@ func (f *Fighter) MatchesRequest(r *http.Request) (bool, error) {
 		if r.Form[toCheck] != nil {
 			wo, wErr := IntInclude(f.Wounds, r.Form[toCheck], GetOperator(key))
 			if wErr != nil {
-				return false, wErr
+				log.Printf("%s - error while querying fighter\n%e", f.Name, wErr)
 			} else {
 				conditions = append(conditions, wo)
 			}
@@ -68,7 +69,7 @@ func (f *Fighter) MatchesRequest(r *http.Request) (bool, error) {
 		if r.Form[toCheck] != nil {
 			pt, pErr := IntInclude(f.Points, r.Form[toCheck], GetOperator(key))
 			if pErr != nil {
-				return false, pErr
+				log.Printf("%s - error while querying fighter\n%e", f.Name, pErr)
 			} else {
 				conditions = append(conditions, pt)
 			}
@@ -80,7 +81,7 @@ func (f *Fighter) MatchesRequest(r *http.Request) (bool, error) {
 		if r.Form[toCheck] != nil {
 			to, tErr := IntInclude(f.Toughness, r.Form[toCheck], GetOperator(key))
 			if tErr != nil {
-				return false, tErr
+				log.Printf("%s - error while querying fighter\n%e", f.Name, tErr)
 			} else {
 				conditions = append(conditions, to)
 			}
@@ -91,12 +92,12 @@ func (f *Fighter) MatchesRequest(r *http.Request) (bool, error) {
 	weapon1Include, weapon1Err := f.Weapons[0].MatchesRequest(r)
 	weaponConditions := []bool{weapon1Include}
 	if weapon1Err != nil {
-		return false, weapon1Err
+		log.Printf("%s - error while querying fighter\n%e", f.Name, weapon1Err)
 	}
 	if len(f.Weapons) == 2 {
 		weapon2Include, weapon2Err := f.Weapons[1].MatchesRequest(r)
 		if weapon2Err != nil {
-			return false, weapon2Err
+			log.Printf("%s - error while querying fighter\n%e", f.Name, weapon2Err)
 		}
 		weaponConditions = append(weaponConditions, weapon2Include)
 	}
@@ -104,9 +105,8 @@ func (f *Fighter) MatchesRequest(r *http.Request) (bool, error) {
 	conditions = append(conditions, Any(weaponConditions))
 
 	if All(conditions) {
-		return true, nil
+		c <- *f
 	}
-	return false, nil
 }
 
 func (weapon *Weapon) MatchesRequest(r *http.Request) (bool, error) {
