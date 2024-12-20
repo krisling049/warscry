@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type FighterHandler struct {
@@ -23,7 +24,7 @@ type RootHandler struct {
 }
 
 func (R *RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("serving request from %s", r.Host)
+	log.Printf("serving root response to %s", r.RemoteAddr)
 	response := []byte(R.Content)
 	_, err := w.Write(response)
 	if err != nil {
@@ -214,39 +215,60 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
 		successfulQuery = false
 		response        []byte
+		toRet           Fighters
+		wg              sync.WaitGroup
 	)
 	perr := r.ParseForm()
 	if perr != nil {
 		response = []byte(fmt.Sprintf("failed to read request -- %s", perr))
 	}
 
-	var toRet Fighters
+	// Create a channel to recieve Fighters
+	// Fighter.MatchesRequest() will send a Fighter into this channel if it meets the requirements of the request
+	fChan := make(chan Fighter, len(h.Fighters))
 
 	if len(r.Form) > 0 {
-		for _, f := range h.Fighters {
-			include, err := f.MatchesRequest(r)
-			if err != nil {
-				response = []byte(fmt.Sprintf("an error occurred -- %s", err))
-				break
-			}
-			if include {
-				toRet = append(toRet, f)
-			}
+		// If criteria are specified in the form, we need to check which Fighters meet that criteria
+		for i := range h.Fighters {
+			// Add 1 to the WaitGroup for each fighter we check
+			wg.Add(1)
+			index := i
+			go func() {
+				// defer Done until MatchesRequest has completed
+				defer wg.Done()
+				h.Fighters[index].MatchesRequest(r, fChan)
+			}()
 		}
+		// Wait until all Fighter.MatchesRequest() calls have completed
+		wg.Wait()
+		// Close the channel to indicate all Fighters have been checked for this request
+
 	} else {
+		// If not criteria have been specified, return all Fighters
 		toRet = append(toRet, h.Fighters...)
 	}
+
+	close(fChan)
+	// Loop over any fighters found in the fChan channel
+	for includedFighter := range fChan {
+		toRet = append(toRet, includedFighter)
+	}
+	// If len(response) is 0 that means we didn't write an error to it
 	if len(response) == 0 {
 		successfulQuery = true
 	}
 
 	if successfulQuery {
+		log.Printf("returning %d fighters to %s", len(toRet), r.RemoteAddr)
+		// Convert the Fighters to valid json
 		marshalledResponse, err := json.Marshal(toRet)
 		if err != nil {
 			response = []byte(fmt.Sprintf("an error occurred while getting the requested data -- %s", err))
 		}
+		// Set the json of fighters as our response
 		response = marshalledResponse
 	}
+	// Write our response ,either list of fighters or an error message, to be return to the requester
 	_, writeErr := w.Write(response)
 	if writeErr != nil {
 		log.Printf("WARNING: failed to write response -- %s", writeErr)
@@ -284,6 +306,7 @@ func (h *AbilityHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if successfulQuery {
+		log.Printf("returning %d abilities to %s", len(toRet), r.RemoteAddr)
 		marshalledResponse, err := json.Marshal(toRet)
 		if err != nil {
 			response = []byte(fmt.Sprintf("an error occurred while getting the requested data -- %s", err))
