@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/krisling049/warcry_go/warscry"
+	"github.com/krisling049/warscry/warscry"
 	"log"
 	"net/http"
 	"os"
