@@ -1,4 +1,4 @@
-package warcry_go
+package warscry
 
 import (
 	"errors"

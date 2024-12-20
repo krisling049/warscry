@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
-	wcd "github.com/krisling049/warcry_go"
+	"github.com/krisling049/warcry_go/warscry"
 	"log"
 	"net/http"
 	"os"
 )
 
 var (
-	AllFighters  = wcd.Fighters{}
-	AllAbilities = wcd.Abilities{}
-	AllWarbands  = wcd.Warbands{}
+	AllFighters  = warscry.Fighters{}
+	AllAbilities = warscry.Abilities{}
+	AllWarbands  = warscry.Warbands{}
 )
 
 func GetPort() string {
@@ -27,7 +27,7 @@ func main() {
 	AllFighters.FromGit()
 	AllAbilities.FromGit()
 
-	AllWarbands = *wcd.LoadWarbands(&AllFighters, &AllAbilities)
+	AllWarbands = *warscry.LoadWarbands(&AllFighters, &AllAbilities)
 	if AllWarbands != nil {
 		log.Println("data loaded")
 	}
@@ -35,13 +35,13 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Register the routes and handlers
-	mux.Handle("/", &wcd.RootHandler{
+	mux.Handle("/", &warscry.RootHandler{
 		Content: fmt.Sprintf("Welcome to Warscry!\nWarbands: %v\nFighters: %v\nAbilities: %v",
 			len(AllWarbands), len(AllFighters), len(AllAbilities),
 		)},
 	)
-	mux.Handle("/fighters", &wcd.FighterHandler{Fighters: AllFighters})
-	mux.Handle("/abilities", &wcd.AbilityHandler{Abilities: AllAbilities})
+	mux.Handle("/fighters", &warscry.FighterHandler{Fighters: AllFighters})
+	mux.Handle("/abilities", &warscry.AbilityHandler{Abilities: AllAbilities})
 
 	// Run the server
 	serveErr := http.ListenAndServe(GetPort(), mux)
