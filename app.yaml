@@ -1,3 +1,4 @@
+# gcloud app deploy {path to this file} --project warscry
 runtime: go121
 
 instance_class: F1
