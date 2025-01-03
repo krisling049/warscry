@@ -27,7 +27,7 @@ func (F *Fighters) GetIds() []string {
 func (f *Fighter) MatchesRequest(r *http.Request, c chan<- Fighter) {
 	var conditions []bool
 	var toCheck string
-	operatorKeys := []string{"__gt", "__gte", "__lt", "__lte"}
+	operatorKeys := []string{"__gt", "__gte", "__lt", "__lte", ""}
 
 	// fighter string characteristics
 	conditions = append(conditions, StringInclude(f.Name, r.Form["name"]))
