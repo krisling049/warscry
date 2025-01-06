@@ -269,6 +269,7 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		response = marshalledResponse
 	}
 	// Write our response ,either list of fighters or an error message, to be return to the requester
+	w.Header().Set("Content-Type", "application/json")
 	_, writeErr := w.Write(response)
 	if writeErr != nil {
 		log.Printf("WARNING: failed to write response -- %s", writeErr)
