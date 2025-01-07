@@ -211,6 +211,12 @@ func StringSliceInclude(characteristic []string, values []string) bool {
 	return Include
 }
 
+func SetHeaderDefaults(w *http.ResponseWriter) {
+	(*w).Header().Set("Content-Type", "application/json")
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+
+}
+
 func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
 		successfulQuery = false
@@ -269,7 +275,7 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		response = marshalledResponse
 	}
 	// Write our response ,either list of fighters or an error message, to be return to the requester
-	w.Header().Set("Content-Type", "application/json")
+	SetHeaderDefaults(&w)
 	_, writeErr := w.Write(response)
 	if writeErr != nil {
 		log.Printf("WARNING: failed to write response -- %s", writeErr)
