@@ -23,8 +23,7 @@ type RootHandler struct {
 	Content string
 }
 
-func (R *RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("serving root response to %s", r.RemoteAddr)
+func (R *RootHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	response := []byte(R.Content)
 	_, err := w.Write(response)
 	if err != nil {
@@ -320,6 +319,7 @@ func (h *AbilityHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		response = marshalledResponse
 	}
+	SetHeaderDefaults(&w)
 	_, writeErr := w.Write(response)
 	if writeErr != nil {
 		log.Printf("WARNING: failed to write response -- %s", writeErr)

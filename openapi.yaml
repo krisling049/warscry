@@ -1,0 +1,361 @@
+openapi: 3.0.3
+info:
+  title: Warscry Test
+  description: |-
+    Testing
+    email: apiteam@swagger.io
+  version: 0.0.1
+servers:
+  - url: https://warscry.nw.r.appspot.com
+paths:
+  /fighters:
+    get:
+      tags:
+        - fighters
+      summary: Query Fighters
+      description: |
+        Use parameters to query for specific characteristics. Numeric characteristics also support operators
+          - __gt (greater than)
+          - __gte (greater than or equal to)
+          - __lt (less than)
+          - __lte (less than or equal to)
+        e.g. ?attacks__gte=5 returns all fighters with an attacks characteristic of 5 or greater.
+      parameters:
+        - name: points
+          in: query
+          description: exact points value
+          required: false
+          explode: true
+          schema:
+            type: string
+        - name: name
+          in: query
+          description: full name of fighter
+          required: false
+          explode: true
+          schema:
+            type: string
+        - name: _id
+          in: query
+          description: full _id of fighter
+          required: false
+          explode: true
+          schema:
+            type: string
+        - name: warband
+          in: query
+          description: warband/faction runemark
+          required: false
+          schema:
+            type: string
+        - name: subfaction
+          in: query
+          description: subfaction runemark
+          required: false
+          schema:
+            type: string
+        - name: grand_alliance
+          in: query
+          description: grand_alliance runemark
+          required: false
+          schema:
+            type: string
+        - name: movement
+          in: query
+          description: exact movement characteristic
+          required: false
+          schema:
+            type: string
+        - name: toughness
+          in: query
+          description: exact toughness characteristic
+          required: false
+          schema:
+            type: string
+        - name: wounds
+          in: query
+          description: exact wounds characteristic
+          required: false
+          schema:
+            type: string
+        - name: runemarks
+          in: query
+          description: non-faction runemarks, can be passed multiple times
+          required: false
+          schema:
+            type: string
+        - name: attacks
+          in: query
+          description: exact attacks characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: strength
+          in: query
+          description: exact strength characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: dmg_hit
+          in: query
+          description: exact damage characteristic (not crit) of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: dmg_crit
+          in: query
+          description: exact critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: points__gt
+          in: query
+          description: greater than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: points__gte
+          in: query
+          description: greater than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: points__lt
+          in: query
+          description: less than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: points__lte
+          in: query
+          description: less than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: movement__gt
+          in: query
+          description: greater than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: movement__gte
+          in: query
+          description: greater than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: movement__lt
+          in: query
+          description: less than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: movement__lte
+          in: query
+          description: less than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: toughness__gt
+          in: query
+          description: greater than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: toughness__gte
+          in: query
+          description: greater than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: toughness__lt
+          in: query
+          description: less than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: toughness__lte
+          in: query
+          description: less than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: wounds__gt
+          in: query
+          description: greater than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: wounds__gte
+          in: query
+          description: greater than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: wounds__lt
+          in: query
+          description: less than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: wounds__lte
+          in: query
+          description: less than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: attacks__gt
+          in: query
+          description: greater than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: attacks__gte
+          in: query
+          description: greater than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: attacks__lt
+          in: query
+          description: less than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: attacks__lte
+          in: query
+          description: less than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: strength__gt
+          in: query
+          description: greater than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: strength__gte
+          in: query
+          description: greater than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: strength__lt
+          in: query
+          description: less than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: strength__lte
+          in: query
+          description: less than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: dmg_hit__gt
+          in: query
+          description: greater than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: dmg_hit__gte
+          in: query
+          description: greater than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: dmg_hit__lt
+          in: query
+          description: less than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: dmg_hit__lte
+          in: query
+          description: less than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: dmg_crit__gt
+          in: query
+          description: greater than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: dmg_crit__gte
+          in: query
+          description: greater than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: dmg_crit__lt
+          in: query
+          description: less than the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+        - name: dmg_crit__lte
+          in: query
+          description: less than or equal to the critical damage characteristic of any weapon a fighter has
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "https://raw.githubusercontent.com/krisling049/warcry_data/main/schemas/fighter_schema.json"
+  /abilities:
+    get:
+      tags:
+        - abilities
+      summary: Query Abilities
+      description: Abilitystuff
+      parameters:
+        - name: _id
+          in: query
+          description: exact ability _id
+          required: false
+          explode: true
+          schema:
+            type: string
+        - name: name
+          in: query
+          description: full name of ability
+          required: false
+          explode: true
+          schema:
+            type: string
+        - name: warband
+          in: query
+          description: warband/faction runemark of ability
+          required: false
+          explode: true
+          schema:
+            type: string
+        - name: runemarks
+          in: query
+          description: non-faction runemarks, can be passed multiple times
+          required: false
+          schema:
+            type: string
+        - name: description
+          in: query
+          description: substring to find in ability text
+          required: false
+          explode: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "https://raw.githubusercontent.com/krisling049/warcry_data/main/schemas/ability_schema.json"
