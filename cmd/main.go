@@ -24,8 +24,19 @@ func GetPort() string {
 }
 
 func main() {
+	var rootContent string
+
 	AllFighters.FromGit()
 	AllAbilities.FromGit()
+
+	rootContent = "Welcome to Warcry!\n" +
+		fmt.Sprintf("Use /fighters to view %v fighters.\n", len(AllFighters)) +
+		"Fighter characteristics can be queried using ?characteristic=value, e.g. /fighters?attacks=4\n" +
+		"Append operators (__gt, __gte, __lt, __lte) to the characteristic for greater than, greater than or equal to etc\n" +
+		"e.g. /fighters?attacks__gte=4 for all fighters with 4 or more attacks\n\n" +
+		fmt.Sprintf("Use /abilities to view %v abilities.\n", len(AllAbilities)) +
+		"Query ability characteristics in the same way (no operators supported currently).\n" +
+		"description=word will find any ability with that word/substring in its description."
 
 	AllWarbands = *warscry.LoadWarbands(&AllFighters, &AllAbilities)
 	if AllWarbands != nil {
@@ -36,9 +47,8 @@ func main() {
 
 	// Register the routes and handlers
 	mux.Handle("/", &warscry.RootHandler{
-		Content: fmt.Sprintf("Welcome to Warscry!\nWarbands: %v\nFighters: %v\nAbilities: %v",
-			len(AllWarbands), len(AllFighters), len(AllAbilities),
-		)},
+		Content: rootContent,
+	},
 	)
 	mux.Handle("/fighters", &warscry.FighterHandler{Fighters: AllFighters})
 	mux.Handle("/abilities", &warscry.AbilityHandler{Abilities: AllAbilities})
