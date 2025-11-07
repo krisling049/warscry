@@ -44,7 +44,12 @@ func (f *Fighter) MatchesRequest(r *http.Request, c chan<- Fighter) {
 	for _, key := range operatorKeys {
 		toCheck = fmt.Sprintf("movement%s", key)
 		if r.Form[toCheck] != nil {
-			mv, mErr := IntInclude(f.Movement, r.Form[toCheck], GetOperator(toCheck))
+			op, opErr := GetOperator(toCheck)
+			if opErr != nil {
+				log.Printf("%s - invalid operator for movement: %v", f.Name, opErr)
+				continue
+			}
+			mv, mErr := IntInclude(f.Movement.Int(), r.Form[toCheck], op)
 			if mErr != nil {
 				log.Printf("%s - error while querying fighter\n%e", f.Name, mErr)
 			} else {
@@ -56,7 +61,12 @@ func (f *Fighter) MatchesRequest(r *http.Request, c chan<- Fighter) {
 	for _, key := range operatorKeys {
 		toCheck = fmt.Sprintf("wounds%s", key)
 		if r.Form[toCheck] != nil {
-			wo, wErr := IntInclude(f.Wounds, r.Form[toCheck], GetOperator(key))
+			op, opErr := GetOperator(toCheck)
+			if opErr != nil {
+				log.Printf("%s - invalid operator for wounds: %v", f.Name, opErr)
+				continue
+			}
+			wo, wErr := IntInclude(f.Wounds.Int(), r.Form[toCheck], op)
 			if wErr != nil {
 				log.Printf("%s - error while querying fighter\n%e", f.Name, wErr)
 			} else {
@@ -68,7 +78,12 @@ func (f *Fighter) MatchesRequest(r *http.Request, c chan<- Fighter) {
 	for _, key := range operatorKeys {
 		toCheck = fmt.Sprintf("points%s", key)
 		if r.Form[toCheck] != nil {
-			pt, pErr := IntInclude(f.Points, r.Form[toCheck], GetOperator(key))
+			op, opErr := GetOperator(toCheck)
+			if opErr != nil {
+				log.Printf("%s - invalid operator for points: %v", f.Name, opErr)
+				continue
+			}
+			pt, pErr := IntInclude(f.Points.Int(), r.Form[toCheck], op)
 			if pErr != nil {
 				log.Printf("%s - error while querying fighter\n%e", f.Name, pErr)
 			} else {
@@ -80,7 +95,12 @@ func (f *Fighter) MatchesRequest(r *http.Request, c chan<- Fighter) {
 	for _, key := range operatorKeys {
 		toCheck = fmt.Sprintf("toughness%s", key)
 		if r.Form[toCheck] != nil {
-			to, tErr := IntInclude(f.Toughness, r.Form[toCheck], GetOperator(key))
+			op, opErr := GetOperator(toCheck)
+			if opErr != nil {
+				log.Printf("%s - invalid operator for toughness: %v", f.Name, opErr)
+				continue
+			}
+			to, tErr := IntInclude(f.Toughness.Int(), r.Form[toCheck], op)
 			if tErr != nil {
 				log.Printf("%s - error while querying fighter\n%e", f.Name, tErr)
 			} else {
@@ -90,20 +110,22 @@ func (f *Fighter) MatchesRequest(r *http.Request, c chan<- Fighter) {
 	}
 
 	// weapon characteristics
-	weapon1Include, weapon1Err := f.Weapons[0].MatchesRequest(r)
-	weaponConditions := []bool{weapon1Include}
-	if weapon1Err != nil {
-		log.Printf("%s - error while querying fighter\n%e", f.Name, weapon1Err)
-	}
-	if len(f.Weapons) == 2 {
-		weapon2Include, weapon2Err := f.Weapons[1].MatchesRequest(r)
-		if weapon2Err != nil {
-			log.Printf("%s - error while querying fighter\n%e", f.Name, weapon2Err)
+	var weaponConditions []bool
+	for _, weapon := range f.Weapons {
+		weaponInclude, weaponErr := weapon.MatchesRequest(r)
+		if weaponErr != nil {
+			log.Printf("%s - error while querying weapon: %v", f.Name, weaponErr)
+			continue
 		}
-		weaponConditions = append(weaponConditions, weapon2Include)
+		weaponConditions = append(weaponConditions, weaponInclude)
 	}
 
-	conditions = append(conditions, Any(weaponConditions))
+	// If no weapons, or at least one weapon matches the query, include this fighter
+	if len(weaponConditions) == 0 {
+		conditions = append(conditions, true)
+	} else {
+		conditions = append(conditions, Any(weaponConditions))
+	}
 
 	if All(conditions) {
 		c <- *f
@@ -123,7 +145,11 @@ func (weapon *Weapon) MatchesRequest(r *http.Request) (bool, error) {
 	for _, key := range operatorKeys {
 		toCheck = fmt.Sprintf("attacks%s", key)
 		if r.Form[toCheck] != nil {
-			a, aErr := IntInclude(weapon.Attacks, r.Form[toCheck], GetOperator(key))
+			op, opErr := GetOperator(toCheck)
+			if opErr != nil {
+				return false, opErr
+			}
+			a, aErr := IntInclude(weapon.Attacks.Int(), r.Form[toCheck], op)
 			if aErr != nil {
 				return false, aErr
 			} else {
@@ -135,7 +161,11 @@ func (weapon *Weapon) MatchesRequest(r *http.Request) (bool, error) {
 	for _, key := range operatorKeys {
 		toCheck = fmt.Sprintf("strength%s", key)
 		if r.Form[toCheck] != nil {
-			s, sErr := IntInclude(weapon.Strength, r.Form[toCheck], GetOperator(key))
+			op, opErr := GetOperator(toCheck)
+			if opErr != nil {
+				return false, opErr
+			}
+			s, sErr := IntInclude(weapon.Strength.Int(), r.Form[toCheck], op)
 			if sErr != nil {
 				return false, sErr
 			} else {
@@ -147,7 +177,11 @@ func (weapon *Weapon) MatchesRequest(r *http.Request) (bool, error) {
 	for _, key := range operatorKeys {
 		toCheck = fmt.Sprintf("dmg_hit%s", key)
 		if r.Form[toCheck] != nil {
-			dh, dhErr := IntInclude(weapon.DamageHit, r.Form[toCheck], GetOperator(key))
+			op, opErr := GetOperator(toCheck)
+			if opErr != nil {
+				return false, opErr
+			}
+			dh, dhErr := IntInclude(weapon.DamageHit.Int(), r.Form[toCheck], op)
 			if dhErr != nil {
 				return false, dhErr
 			} else {
@@ -159,7 +193,11 @@ func (weapon *Weapon) MatchesRequest(r *http.Request) (bool, error) {
 	for _, key := range operatorKeys {
 		toCheck = fmt.Sprintf("dmg_crit%s", key)
 		if r.Form[toCheck] != nil {
-			dc, dcErr := IntInclude(weapon.DamageCrit, r.Form[toCheck], GetOperator(key))
+			op, opErr := GetOperator(toCheck)
+			if opErr != nil {
+				return false, opErr
+			}
+			dc, dcErr := IntInclude(weapon.DamageCrit.Int(), r.Form[toCheck], op)
 			if dcErr != nil {
 				return false, dcErr
 			} else {
@@ -171,7 +209,11 @@ func (weapon *Weapon) MatchesRequest(r *http.Request) (bool, error) {
 	for _, key := range operatorKeys {
 		toCheck = fmt.Sprintf("max_range%s", key)
 		if r.Form[toCheck] != nil {
-			mar, marErr := IntInclude(weapon.MaximumRange, r.Form[toCheck], GetOperator(key))
+			op, opErr := GetOperator(toCheck)
+			if opErr != nil {
+				return false, opErr
+			}
+			mar, marErr := IntInclude(weapon.MaximumRange.Int(), r.Form[toCheck], op)
 			if marErr != nil {
 				return false, marErr
 			} else {
@@ -183,7 +225,11 @@ func (weapon *Weapon) MatchesRequest(r *http.Request) (bool, error) {
 	for _, key := range operatorKeys {
 		toCheck = fmt.Sprintf("min_range%s", key)
 		if r.Form[toCheck] != nil {
-			mir, mirErr := IntInclude(weapon.MinimumRange, r.Form[toCheck], GetOperator(key))
+			op, opErr := GetOperator(toCheck)
+			if opErr != nil {
+				return false, opErr
+			}
+			mir, mirErr := IntInclude(weapon.MinimumRange.Int(), r.Form[toCheck], op)
 			if mirErr != nil {
 				return false, mirErr
 			} else {

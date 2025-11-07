@@ -20,15 +20,272 @@ type AbilityHandler struct {
 }
 
 type RootHandler struct {
-	Content string
+	Version      string
+	FighterCount int
+	AbilityCount int
+	DocsURL      string
 }
 
-func (R *RootHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
-	response := []byte(R.Content)
-	_, err := w.Write(response)
-	if err != nil {
-		log.Printf("WARNING: failed to write response -- %s", err)
+type APIInfo struct {
+	Name         string   `json:"name"`
+	Version      string   `json:"version"`
+	Endpoints    []string `json:"endpoints"`
+	FighterCount int      `json:"fighter_count"`
+	AbilityCount int      `json:"ability_count"`
+	DocsURL      string   `json:"documentation_url"`
+}
+
+type HealthHandler struct {
+	FighterCount int
+	AbilityCount int
+}
+
+type HealthResponse struct {
+	Status          string `json:"status"`
+	FightersLoaded  int    `json:"fighters_loaded"`
+	AbilitiesLoaded int    `json:"abilities_loaded"`
+}
+
+func (R *RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	accept := r.Header.Get("Accept")
+
+	// Determine content type based on Accept header
+	wantsJSON := strings.Contains(accept, "application/json")
+	wantsHTML := strings.Contains(accept, "text/html")
+
+	apiInfo := APIInfo{
+		Name:         "Warcry API",
+		Version:      R.Version,
+		Endpoints:    []string{"/", "/fighters", "/abilities", "/health"},
+		FighterCount: R.FighterCount,
+		AbilityCount: R.AbilityCount,
+		DocsURL:      R.DocsURL,
 	}
+
+	// JSON response for API clients
+	if wantsJSON && !wantsHTML {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(apiInfo); err != nil {
+			log.Printf("WARNING: failed to encode JSON response -- %s", err)
+		}
+		return
+	}
+
+	// HTML response for browsers
+	if wantsHTML {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusOK)
+		html := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <title>Warcry API</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; }
+        h1 { color: #333; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .endpoint { margin: 20px 0; }
+        .stats { background: #e8f5e9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Warcry API %s</h1>
+    <div class="stats">
+        <strong>Data loaded:</strong> %d fighters, %d abilities
+    </div>
+    <h2>Endpoints</h2>
+    <div class="endpoint">
+        <h3>GET /fighters</h3>
+        <p>Query fighters by characteristics. Supports operators for numeric fields.</p>
+        <p><strong>Examples:</strong></p>
+        <pre>GET /fighters?attacks__gte=4
+GET /fighters?wounds__gt=20&toughness__gte=5
+GET /fighters?warband=stormcast-eternals&runemarks=hero</pre>
+        <p><strong>Operators:</strong> <code>__gt</code> (greater than), <code>__gte</code> (greater or equal), <code>__lt</code> (less than), <code>__lte</code> (less or equal)</p>
+    </div>
+    <div class="endpoint">
+        <h3>GET /abilities</h3>
+        <p>Query abilities by characteristics.</p>
+        <p><strong>Examples:</strong></p>
+        <pre>GET /abilities?warband=stormcast-eternals
+GET /abilities?description=wounds</pre>
+    </div>
+    <div class="endpoint">
+        <h3>GET /health</h3>
+        <p>Health check endpoint. Returns API status.</p>
+    </div>
+    <h2>Documentation</h2>
+    <p>OpenAPI specification: <a href="%s">%s</a></p>
+</body>
+</html>`, R.Version, R.FighterCount, R.AbilityCount, R.DocsURL, R.DocsURL)
+		if _, err := w.Write([]byte(html)); err != nil {
+			log.Printf("WARNING: failed to write HTML response -- %s", err)
+		}
+		return
+	}
+
+	// Plain text fallback
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(http.StatusOK)
+	plainText := fmt.Sprintf(`Welcome to Warcry API %s
+
+Data loaded: %d fighters, %d abilities
+
+Endpoints:
+- GET /fighters - Query fighters by characteristics
+- GET /abilities - Query abilities
+- GET /health - Health check
+
+Fighter characteristics can be queried using ?characteristic=value
+Example: /fighters?attacks=4
+
+Append operators (__gt, __gte, __lt, __lte) for comparisons
+Example: /fighters?attacks__gte=4
+
+For abilities, use description=word to search descriptions
+Example: /abilities?description=wounds
+
+Documentation: %s
+`, R.Version, R.FighterCount, R.AbilityCount, R.DocsURL)
+	if _, err := w.Write([]byte(plainText)); err != nil {
+		log.Printf("WARNING: failed to write plain text response -- %s", err)
+	}
+}
+
+func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(http.StatusOK)
+
+	response := HealthResponse{
+		Status:          "ok",
+		FightersLoaded:  h.FighterCount,
+		AbilitiesLoaded: h.AbilityCount,
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("WARNING: failed to encode health response -- %s", err)
+	}
+}
+
+// ErrorResponse represents a structured API error
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+// QueryError represents a query parameter validation error
+type QueryError struct {
+	Parameter string
+	Value     string
+	Reason    string
+}
+
+func (e QueryError) Error() string {
+	return fmt.Sprintf("invalid query parameter '%s=%s': %s", e.Parameter, e.Value, e.Reason)
+}
+
+// writeErrorJSON writes a JSON error response with the specified HTTP status code
+func writeErrorJSON(w http.ResponseWriter, statusCode int, errMsg string) {
+	SetHeaderDefaults(&w)
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(ErrorResponse{Error: errMsg})
+}
+
+// validFighterParams lists all recognized query parameters for /fighters endpoint
+var validFighterParams = map[string]bool{
+	// String params
+	"name": true, "_id": true, "warband": true, "subfaction": true,
+	"grand_alliance": true, "runemarks": true, "weapon_runemark": true,
+	// Integer params (base names only, operators checked separately)
+	"movement": true, "toughness": true, "wounds": true, "points": true,
+	"attacks": true, "strength": true, "dmg_hit": true, "dmg_crit": true,
+	"min_range": true, "max_range": true,
+}
+
+// validAbilityParams lists all recognized query parameters for /abilities endpoint
+var validAbilityParams = map[string]bool{
+	"_id": true, "name": true, "warband": true, "cost": true,
+	"description": true, "runemarks": true,
+}
+
+// validOperators lists all supported operator suffixes
+var validOperators = []string{"__gt", "__gte", "__lt", "__lte"}
+
+// validateQueryParams checks if all query parameters are recognized
+// Returns error listing all unrecognized parameters
+func validateQueryParams(form map[string][]string, validParams map[string]bool, allowOperators bool) error {
+	var invalidParams []string
+
+	for param := range form {
+		valid := validParams[param]
+
+		// If operators allowed, check if param is base + operator
+		if !valid && allowOperators {
+			for _, op := range validOperators {
+				if strings.HasSuffix(param, op) {
+					baseName := strings.TrimSuffix(param, op)
+					if validParams[baseName] {
+						valid = true
+						break
+					}
+				}
+			}
+		}
+
+		if !valid {
+			invalidParams = append(invalidParams, param)
+		}
+	}
+
+	if len(invalidParams) > 0 {
+		return fmt.Errorf("unrecognized query parameters: %s", strings.Join(invalidParams, ", "))
+	}
+	return nil
+}
+
+// validateIntParam validates a single integer parameter value
+func validateIntParam(name string, values []string) error {
+	if len(values) == 0 {
+		return nil
+	}
+
+	// Check each value (allowing multiple for OR logic)
+	for _, val := range values {
+		_, err := strconv.Atoi(val)
+		if err != nil {
+			return QueryError{
+				Parameter: name,
+				Value:     val,
+				Reason:    "must be an integer",
+			}
+		}
+	}
+	return nil
+}
+
+// validateIntParams validates all integer parameters in the request
+func validateIntParams(form map[string][]string, paramNames []string) error {
+	for _, param := range paramNames {
+		// Check base param and all operator variants
+		if form[param] != nil {
+			if err := validateIntParam(param, form[param]); err != nil {
+				return err
+			}
+		}
+		for _, op := range validOperators {
+			fullKey := param + op
+			if form[fullKey] != nil {
+				if err := validateIntParam(fullKey, form[fullKey]); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func All(s []bool) bool {
@@ -89,7 +346,7 @@ func LessThanOrEqualTo(characteristic int, maximum int) bool {
 	return false
 }
 
-func GetOperator(queryKey string) Operator {
+func GetOperator(queryKey string) (Operator, error) {
 	OperatorMap := map[string]Operator{
 		"gt":  GreaterThan,
 		"gte": GreaterThanOrEqualTo,
@@ -97,10 +354,15 @@ func GetOperator(queryKey string) Operator {
 		"lte": LessThanOrEqualTo,
 	}
 	if strings.Contains(queryKey, "__") {
-		opString := strings.Split(queryKey, "_")
-		return OperatorMap[opString[len(opString)-1]]
+		opString := strings.Split(queryKey, "__")
+		opKey := opString[len(opString)-1]
+		op, exists := OperatorMap[opKey]
+		if !exists {
+			return nil, fmt.Errorf("invalid operator: %s", opKey)
+		}
+		return op, nil
 	}
-	return Equals
+	return Equals, nil
 }
 
 func StringInclude(characteristic string, values []string) bool {
@@ -218,62 +480,69 @@ func SetHeaderDefaults(w *http.ResponseWriter) {
 
 func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
-		successfulQuery = false
-		response        []byte
-		toRet           Fighters
-		wg              sync.WaitGroup
+		response []byte
+		toRet    Fighters
+		wg       sync.WaitGroup
 	)
-	perr := r.ParseForm()
-	if perr != nil {
-		response = []byte(fmt.Sprintf("failed to read request -- %s", perr))
+
+	// Step 1: Parse form data
+	if err := r.ParseForm(); err != nil {
+		writeErrorJSON(w, http.StatusBadRequest, fmt.Sprintf("failed to parse request: %v", err))
+		log.Printf("Bad request from %s: %v", r.RemoteAddr, err)
+		return
 	}
 
-	// Create a channel to recieve Fighters
-	// Fighter.MatchesRequest() will send a Fighter into this channel if it meets the requirements of the request
+	// Step 2: Validate all query parameters are recognized
+	if err := validateQueryParams(r.Form, validFighterParams, true); err != nil {
+		writeErrorJSON(w, http.StatusBadRequest, err.Error())
+		log.Printf("Bad request from %s: %v", r.RemoteAddr, err)
+		return
+	}
+
+	// Step 3: Validate all integer parameters have valid values
+	intParams := []string{"movement", "toughness", "wounds", "points",
+		"attacks", "strength", "dmg_hit", "dmg_crit",
+		"min_range", "max_range"}
+	if err := validateIntParams(r.Form, intParams); err != nil {
+		writeErrorJSON(w, http.StatusBadRequest, err.Error())
+		log.Printf("Bad request from %s: %v", r.RemoteAddr, err)
+		return
+	}
+
+	// All validation passed - proceed with filtering
 	fChan := make(chan Fighter, len(h.Fighters))
 
 	if len(r.Form) > 0 {
-		// If criteria are specified in the form, we need to check which Fighters meet that criteria
+		// Filter fighters based on validated criteria
 		for i := range h.Fighters {
-			// Add 1 to the WaitGroup for each fighter we check
 			wg.Add(1)
 			index := i
 			go func() {
-				// defer Done until MatchesRequest has completed
 				defer wg.Done()
 				h.Fighters[index].MatchesRequest(r, fChan)
 			}()
 		}
-		// Wait until all Fighter.MatchesRequest() calls have completed
 		wg.Wait()
-		// Close the channel to indicate all Fighters have been checked for this request
-
 	} else {
-		// If not criteria have been specified, return all Fighters
+		// No criteria - return all fighters
 		toRet = append(toRet, h.Fighters...)
 	}
 
 	close(fChan)
-	// Loop over any fighters found in the fChan channel
 	for includedFighter := range fChan {
 		toRet = append(toRet, includedFighter)
 	}
-	// If len(response) is 0 that means we didn't write an error to it
-	if len(response) == 0 {
-		successfulQuery = true
+
+	// Marshal and return results
+	log.Printf("returning %d fighters to %s", len(toRet), r.RemoteAddr)
+	marshalledResponse, err := json.Marshal(toRet)
+	if err != nil {
+		writeErrorJSON(w, http.StatusInternalServerError, fmt.Sprintf("error marshalling response: %v", err))
+		log.Printf("ERROR: failed to marshal fighters: %s", err)
+		return
 	}
 
-	if successfulQuery {
-		log.Printf("returning %d fighters to %s", len(toRet), r.RemoteAddr)
-		// Convert the Fighters to valid json
-		marshalledResponse, err := json.Marshal(toRet)
-		if err != nil {
-			response = []byte(fmt.Sprintf("an error occurred while getting the requested data -- %s", err))
-		}
-		// Set the json of fighters as our response
-		response = marshalledResponse
-	}
-	// Write our response ,either list of fighters or an error message, to be return to the requester
+	response = marshalledResponse
 	SetHeaderDefaults(&w)
 	_, writeErr := w.Write(response)
 	if writeErr != nil {
@@ -282,23 +551,33 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AbilityHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var (
-		successfulQuery = false
-		response        []byte
-	)
-	perr := r.ParseForm()
-	if perr != nil {
-		response = []byte(fmt.Sprintf("failed to read request -- %s", perr))
+	var response []byte
+
+	// Step 1: Parse form data
+	if err := r.ParseForm(); err != nil {
+		writeErrorJSON(w, http.StatusBadRequest, fmt.Sprintf("failed to parse request: %v", err))
+		log.Printf("Bad request from %s: %v", r.RemoteAddr, err)
+		return
 	}
 
+	// Step 2: Validate all query parameters are recognized
+	if err := validateQueryParams(r.Form, validAbilityParams, false); err != nil {
+		writeErrorJSON(w, http.StatusBadRequest, err.Error())
+		log.Printf("Bad request from %s: %v", r.RemoteAddr, err)
+		return
+	}
+
+	// All validation passed - proceed with filtering
 	var toRet Abilities
 
 	if len(r.Form) > 0 {
 		for _, a := range h.Abilities {
 			include, err := a.MatchesRequest(r)
 			if err != nil {
-				response = []byte(fmt.Sprintf("an error occurred -- %s", err))
-				break
+				// This should not happen with validated input
+				writeErrorJSON(w, http.StatusInternalServerError, fmt.Sprintf("error filtering abilities: %v", err))
+				log.Printf("ERROR: unexpected error from %s: %v", r.RemoteAddr, err)
+				return
 			}
 			if include {
 				toRet = append(toRet, a)
@@ -307,18 +586,17 @@ func (h *AbilityHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		toRet = append(toRet, h.Abilities...)
 	}
-	if len(response) == 0 {
-		successfulQuery = true
+
+	// Marshal and return results
+	log.Printf("returning %d abilities to %s", len(toRet), r.RemoteAddr)
+	marshalledResponse, err := json.Marshal(toRet)
+	if err != nil {
+		writeErrorJSON(w, http.StatusInternalServerError, fmt.Sprintf("error marshalling response: %v", err))
+		log.Printf("ERROR: failed to marshal abilities: %s", err)
+		return
 	}
 
-	if successfulQuery {
-		log.Printf("returning %d abilities to %s", len(toRet), r.RemoteAddr)
-		marshalledResponse, err := json.Marshal(toRet)
-		if err != nil {
-			response = []byte(fmt.Sprintf("an error occurred while getting the requested data -- %s", err))
-		}
-		response = marshalledResponse
-	}
+	response = marshalledResponse
 	SetHeaderDefaults(&w)
 	_, writeErr := w.Write(response)
 	if writeErr != nil {
