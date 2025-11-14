@@ -6,6 +6,7 @@ inbound_services:
 
 env_variables:
   WARSCRY_PORT: "8080"
+  WARSCRY_POLL_INTERVAL: "30"
 
 main: ./cmd/main.go
 

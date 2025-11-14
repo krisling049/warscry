@@ -12,18 +12,17 @@ import (
 )
 
 type FighterHandler struct {
-	Fighters Fighters
+	DataStore *DataStore
 }
 
 type AbilityHandler struct {
-	Abilities Abilities
+	DataStore *DataStore
 }
 
 type RootHandler struct {
-	Version      string
-	FighterCount int
-	AbilityCount int
-	DocsURL      string
+	Version   string
+	DataStore *DataStore
+	DocsURL   string
 }
 
 type APIInfo struct {
@@ -36,8 +35,7 @@ type APIInfo struct {
 }
 
 type HealthHandler struct {
-	FighterCount int
-	AbilityCount int
+	DataStore *DataStore
 }
 
 type HealthResponse struct {
@@ -53,12 +51,15 @@ func (R *RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	wantsJSON := strings.Contains(accept, "application/json")
 	wantsHTML := strings.Contains(accept, "text/html")
 
+	// Get current counts from DataStore
+	fighterCount, abilityCount := R.DataStore.GetCounts()
+
 	apiInfo := APIInfo{
 		Name:         "Warcry API",
 		Version:      R.Version,
 		Endpoints:    []string{"/", "/fighters", "/abilities", "/health"},
-		FighterCount: R.FighterCount,
-		AbilityCount: R.AbilityCount,
+		FighterCount: fighterCount,
+		AbilityCount: abilityCount,
 		DocsURL:      R.DocsURL,
 	}
 
@@ -120,7 +121,7 @@ GET /abilities?description=wounds</pre>
     <h2>Documentation</h2>
     <p>OpenAPI specification: <a href="%s">%s</a></p>
 </body>
-</html>`, R.Version, R.FighterCount, R.AbilityCount, R.DocsURL, R.DocsURL)
+</html>`, R.Version, fighterCount, abilityCount, R.DocsURL, R.DocsURL)
 		if _, err := w.Write([]byte(html)); err != nil {
 			log.Printf("WARNING: failed to write HTML response -- %s", err)
 		}
@@ -150,7 +151,7 @@ For abilities, use description=word to search descriptions
 Example: /abilities?description=wounds
 
 Documentation: %s
-`, R.Version, R.FighterCount, R.AbilityCount, R.DocsURL)
+`, R.Version, fighterCount, abilityCount, R.DocsURL)
 	if _, err := w.Write([]byte(plainText)); err != nil {
 		log.Printf("WARNING: failed to write plain text response -- %s", err)
 	}
@@ -161,10 +162,13 @@ func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusOK)
 
+	// Get current counts from DataStore
+	fighterCount, abilityCount := h.DataStore.GetCounts()
+
 	response := HealthResponse{
 		Status:          "ok",
-		FightersLoaded:  h.FighterCount,
-		AbilitiesLoaded: h.AbilityCount,
+		FightersLoaded:  fighterCount,
+		AbilitiesLoaded: abilityCount,
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -192,7 +196,9 @@ func (e QueryError) Error() string {
 func writeErrorJSON(w http.ResponseWriter, statusCode int, errMsg string) {
 	SetHeaderDefaults(&w)
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(ErrorResponse{Error: errMsg})
+	if err := json.NewEncoder(w).Encode(ErrorResponse{Error: errMsg}); err != nil {
+		log.Printf("WARNING: failed to encode error response: %v", err)
+	}
 }
 
 // validFighterParams lists all recognized query parameters for /fighters endpoint
@@ -479,6 +485,9 @@ func SetHeaderDefaults(w *http.ResponseWriter) {
 }
 
 func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Get current fighters from DataStore (snapshot at request start)
+	fighters := h.DataStore.GetFighters()
+
 	var (
 		response []byte
 		toRet    Fighters
@@ -510,22 +519,22 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// All validation passed - proceed with filtering
-	fChan := make(chan Fighter, len(h.Fighters))
+	fChan := make(chan Fighter, len(fighters))
 
 	if len(r.Form) > 0 {
 		// Filter fighters based on validated criteria
-		for i := range h.Fighters {
+		for i := range fighters {
 			wg.Add(1)
 			index := i
 			go func() {
 				defer wg.Done()
-				h.Fighters[index].MatchesRequest(r, fChan)
+				fighters[index].MatchesRequest(r, fChan)
 			}()
 		}
 		wg.Wait()
 	} else {
 		// No criteria - return all fighters
-		toRet = append(toRet, h.Fighters...)
+		toRet = append(toRet, fighters...)
 	}
 
 	close(fChan)
@@ -551,6 +560,9 @@ func (h *FighterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AbilityHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Get current abilities from DataStore (snapshot at request start)
+	abilities := h.DataStore.GetAbilities()
+
 	var response []byte
 
 	// Step 1: Parse form data
@@ -571,7 +583,7 @@ func (h *AbilityHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var toRet Abilities
 
 	if len(r.Form) > 0 {
-		for _, a := range h.Abilities {
+		for _, a := range abilities {
 			include, err := a.MatchesRequest(r)
 			if err != nil {
 				// This should not happen with validated input
@@ -584,7 +596,7 @@ func (h *AbilityHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
-		toRet = append(toRet, h.Abilities...)
+		toRet = append(toRet, abilities...)
 	}
 
 	// Marshal and return results

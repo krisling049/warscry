@@ -29,3 +29,6 @@ go.work.sum
 
 # artifacts
 /cmd/build/
+
+# Agents
+.claude/settings.local.json
